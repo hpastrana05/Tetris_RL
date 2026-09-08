@@ -1,0 +1,19 @@
+[project]
+name = "tetris-rl"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Hugo Pastrana Torres", email = "hugo.pastrana.torres@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "pygame>=2.6.1",
+]
+
+[project.scripts]
+tetris-rl = "tetris_rl:main"
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13.0"]
+build-backend = "uv_build"
