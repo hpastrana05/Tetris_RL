@@ -3,7 +3,7 @@ from tetris_rl.config import BLOCK_SIZE
 import pygame
 
 
-class piece:
+class Piece:
     def __init__(self, shape, color):
         self.shape = shape
         self.color = color
