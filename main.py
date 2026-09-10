@@ -65,7 +65,7 @@ def main():
 
         # Draw game elements here
         
-        
+    
         # Update the display
         pygame.display.flip()
 

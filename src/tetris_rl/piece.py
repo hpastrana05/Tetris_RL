@@ -32,8 +32,8 @@ class Piece:
                     grid_x = self.pos_x + x
                     grid_y = self.pos_y + y
                     if (grid_x < 0 or grid_x >= len(grid[0]) or 
-                        grid_y < 0 or grid_y >= len(grid) or 
-                        grid[grid_y][grid_x]):
+                        grid_y >= len(grid) or 
+                        (grid_y >= 0 and grid[grid_y][grid_x])):
                         return True
         return False
 

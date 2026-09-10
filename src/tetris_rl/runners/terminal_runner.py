@@ -35,10 +35,11 @@ def run(game: Tetris):
     while not game.game_over:
         render(game)
         command = input(
-            "a: Left | d: Right | s: Move down | x: drop | q: exit"
+            f"a: Left | d: Right | s: Move down | x: drop | \n" +
+             "e: rotate_r | q: rotate_l | w: rotate_180 | h: exit "
         ).strip().lower()
 
-        if command == "q":
+        if command == "h":
             return
         
         action = actions.get(command)

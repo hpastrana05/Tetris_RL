@@ -46,6 +46,12 @@ class Tetris:
         self.board = new_board
 
     def _lock_piece(self):
+        # Check every block before writing, so top-out cannot partially lock a piece.
+        for y, row in enumerate(self.actual_piece.shape):
+            if any(row) and self.actual_piece.pos_y + y < 0:
+                self.game_over = True
+                return
+
         for y, row in enumerate(self.actual_piece.shape):
             for x, cell in enumerate(row):
                 if cell:
@@ -58,12 +64,10 @@ class Tetris:
     def _take_next_piece(self):
         self.actual_piece = self.next_pieces.pop(0)
 
-        self.actual_piece.pos_y = 0
+        self.actual_piece.pos_y = -2
         self.actual_piece.pos_x = (NUM_COLS - len(self.actual_piece.shape[0]))//2
 
         self._generate_next_pieces()
-
-        self.game_over = self.actual_piece._check_collision(self.board)
 
     def reset(self):
         self.board = [[0 for _ in range(NUM_COLS)] for _ in range(NUM_ROWS)]
@@ -89,14 +93,16 @@ class Tetris:
         elif action == TetrisActions.MOVE_D:
             if not self.actual_piece.shift_down(self.board):
                 self._lock_piece()
-                self._take_next_piece()
+                if not self.game_over:
+                    self._take_next_piece()
 
 
         elif action == TetrisActions.DROP:
             while self.actual_piece.shift_down(self.board):
                 pass
             self._lock_piece()
-            self._take_next_piece()
+            if not self.game_over:
+                self._take_next_piece()
 
         elif action == TetrisActions.ROTATE_CW:
             self.actual_piece.rotate(1, self.board)
@@ -108,4 +114,15 @@ class Tetris:
             self.actual_piece.rotate(2, self.board)
 
         elif action == TetrisActions.SAVE_PIECE:
-            pass
+            if self.saved_piece:
+                self.actual_piece, self.saved_piece = self.saved_piece, self.actual_piece
+
+                self.saved_piece.rotation = 0
+                # TODO set posistion correctly
+
+                self.actual_piece.pos_y = -2
+                self.actual_piece.pos_x = (NUM_COLS - len(self.actual_piece.shape[0]))//2
+
+            else:
+                self.saved_piece = self.actual_piece
+                self._take_next_piece()

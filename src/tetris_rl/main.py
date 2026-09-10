@@ -1,7 +1,7 @@
 from tetris_rl.tetris import Tetris
 
 def main():
-    mode = 1  # Modes: 0 (pygame), 1 (terminal), 2 (headless)
+    mode = 0  # Modes: 0 (pygame), 1 (terminal), 2 (headless)
 
     game = Tetris()
 
