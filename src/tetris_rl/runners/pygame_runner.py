@@ -2,23 +2,33 @@ import pygame
 
 from tetris_rl.tetris_actions import TetrisActions
 from tetris_rl.tetris import Tetris
+from tetris_rl.piece import Piece
 from tetris_rl.config import (
     WINDOW_HEIGHT, 
     WINDOW_WIDTH,
     BG_COLOR,
+    GRAY,
     FPS,
     GRID_COLOR,
-    BLOCK_SIZE
+    BLOCK_SIZE,
+    NUM_COLS,
+    NUM_ROWS,
+    SIDE_BOARD_SIZE,
+    HEIGHT_SAVED,
+    HALF_SIDE_BOARD,
+    N_SHOWED_PIECES,
 )
 
 def draw_grid(tetris: Tetris, screen):
     for y, row in enumerate(tetris.board):
         for x, cell in enumerate(row):
+            if cell:
+                pygame.draw.rect(screen, GRAY, (x*BLOCK_SIZE, y*BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE))
+
             pygame.draw.rect(screen, GRID_COLOR, (x*BLOCK_SIZE, y*BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE), 1)
 
-def draw_piece(tetris:Tetris, screen):
-    piece = tetris.actual_piece
 
+def draw_piece(piece: Piece, screen):
     for y, row in enumerate(piece.shape):
         for x, col in enumerate(row):
             if col:
@@ -27,7 +37,37 @@ def draw_piece(tetris:Tetris, screen):
 
                 pygame.draw.rect(screen, piece.color, (dx*BLOCK_SIZE, dy*BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE))
 
-            
+def draw_sideboard(tetris: Tetris, screen):
+    pygame.draw.rect(screen, GRID_COLOR, (NUM_COLS*BLOCK_SIZE, 0, SIDE_BOARD_SIZE*BLOCK_SIZE, HEIGHT_SAVED*BLOCK_SIZE))
+    
+    saved = tetris.saved_piece
+    
+    if saved:
+        x_size_saved = len(saved.shape[0])
+        y_size_saved = len(saved.shape)
+        for y, row in enumerate(saved.shape):
+                for x, col in enumerate(row):
+                    if col:
+                        
+                        dx = HALF_SIDE_BOARD - x_size_saved* BLOCK_SIZE / 2 + x * BLOCK_SIZE
+
+                        dy = HEIGHT_SAVED*BLOCK_SIZE//2 + (y - y_size_saved//2)*BLOCK_SIZE
+
+                        pygame.draw.rect(screen, saved.color, (dx, dy, BLOCK_SIZE, BLOCK_SIZE))
+
+    for i in range(N_SHOWED_PIECES):
+        piece = tetris.next_pieces[i]
+        x_size = len(piece.shape[0])
+        y_size = len(piece.shape)
+        for y, row in enumerate(piece.shape):
+            for x, col in enumerate(row):
+                if col:
+
+                    dx = HALF_SIDE_BOARD - x_size * BLOCK_SIZE / 2 + x * BLOCK_SIZE
+
+                    dy = HEIGHT_SAVED*BLOCK_SIZE + i*BLOCK_SIZE*3 + y*BLOCK_SIZE
+
+                    pygame.draw.rect(screen, piece.color, (dx, dy, BLOCK_SIZE, BLOCK_SIZE))
 
 
 def run(tetris: Tetris):
@@ -49,24 +89,29 @@ def run(tetris: Tetris):
 
     clock = pygame.time.Clock()
     running = True
+    
 
     while running:
+        dt = clock.tick(FPS)
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
 
-            elif event.type == pygame.K_LEFT:
-                tetris.step(actions[event.type])
+            elif event.type == pygame.KEYDOWN and event.key in actions.keys():
+                tetris.step(actions[event.key])
+
         # Update game 
 
         # Draw game
         screen.fill(BG_COLOR)
 
         draw_grid(tetris, screen)
-        draw_piece(tetris, screen)
+        draw_piece(tetris.actual_piece, screen)
+        draw_sideboard(tetris, screen)
 
 
-        clock.tick(FPS)
+        
         # Send screen
         pygame.display.flip()
 

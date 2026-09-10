@@ -10,7 +10,9 @@ class Tetris:
         self.actual_piece = None
         self.next_pieces = []
         self.saved_piece = None
+        self.can_save = True
 
+        self.lines_cleared = 0
         self.points = 0
         self.game_over = False
 
@@ -43,6 +45,8 @@ class Tetris:
         while len(new_board) < NUM_ROWS:
             new_board.insert(0, [0 for _ in range(NUM_COLS)])
 
+        self.lines_cleared += lines_cleared
+
         self.board = new_board
 
     def _lock_piece(self):
@@ -62,6 +66,7 @@ class Tetris:
         self._check_line_clear()
     
     def _take_next_piece(self):
+        self.can_save = True
         self.actual_piece = self.next_pieces.pop(0)
 
         self.actual_piece.pos_y = -2
@@ -76,6 +81,7 @@ class Tetris:
         self._take_next_piece()
         self.saved_piece = None
 
+        self.lines_cleared = 0
         self.game_over = False
         self.points = 0
 
@@ -114,15 +120,28 @@ class Tetris:
             self.actual_piece.rotate(2, self.board)
 
         elif action == TetrisActions.SAVE_PIECE:
+            if not self.can_save:
+                return
+            
             if self.saved_piece:
                 self.actual_piece, self.saved_piece = self.saved_piece, self.actual_piece
 
+                shape = next(shape for kind, shape, color in SHAPES if kind == self.saved_piece.kind)
+
+                self.saved_piece.shape = [row[:] for row in shape]
                 self.saved_piece.rotation = 0
-                # TODO set posistion correctly
+                
 
                 self.actual_piece.pos_y = -2
                 self.actual_piece.pos_x = (NUM_COLS - len(self.actual_piece.shape[0]))//2
 
             else:
                 self.saved_piece = self.actual_piece
+                shape = next(shape for kind, shape, _ in SHAPES if kind == self.saved_piece.kind)
+                
+                self.saved_piece.shape = [row[:] for row in shape]
+                self.saved_piece.rotation = 0
+
                 self._take_next_piece()
+
+            self.can_save = False

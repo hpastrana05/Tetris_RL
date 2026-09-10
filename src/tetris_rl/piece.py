@@ -47,11 +47,15 @@ class Piece:
         return self._try_move(0, 1, board)
 
     def rotate(self, turns, board):
-        if turns not in (1, -1, 2):
+        if turns not in (0, 1, -1, 2):
             raise ValueError("turns debe ser 1, -1 o 2")
+
+        if turns == 0:
+            return False
         
         if self.kind == "O":
             return False
+        
         
         old_shape = self.shape
         old_x = self.pos_x
