@@ -1,7 +1,4 @@
 
-from tetris_rl.config import BLOCK_SIZE
-import pygame
-
 
 class Piece:
     def __init__(self, shape, color):
@@ -10,16 +7,18 @@ class Piece:
         self.pos_x = 0
         self.pos_y = 0
 
-    def draw(self, screen):
-        for y, row in enumerate(self.shape):
-            for x, cell in enumerate(row):
-                if cell:
-                    pygame.draw.rect(screen, 
-                                     self.color, 
-                                     (self.pos_x * BLOCK_SIZE + x * BLOCK_SIZE, 
-                                      self.pos_y * BLOCK_SIZE + y * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE))
+    def _try_move(self, dx, dy, grid):
+        self.pos_x += dx
+        self.pos_y += dy
 
-    def check_collision(self, grid):
+        if self._check_collision(grid):
+            self.pos_x -= dx
+            self.pos_y -= dy
+            return False
+        return True
+
+
+    def _check_collision(self, grid):
         for y, row in enumerate(self.shape):
             for x, cell in enumerate(row):
                 if cell:
@@ -31,17 +30,11 @@ class Piece:
                         return True
         return False
 
-    def move_left(self):
-        self.pos_x -= 1
+    def move_left(self, board):
+        self._try_move(-1, 0, board)
 
-    def move_right(self):
-        self.pos_x += 1
+    def move_right(self, board):
+        self._try_move(1, 0, board)
 
-    def shift_down(self):
-        self.pos_y += 1
-
-    def hard_drop(self, grid):
-        while not self.check_collision(grid):
-            self.shift_down()
-        self.pos_y -= 1  # Move back up one row after collision
-        
+    def shift_down(self, board):
+        return self._try_move(0, 1, board)
