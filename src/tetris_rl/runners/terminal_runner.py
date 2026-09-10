@@ -27,6 +27,9 @@ def run(game: Tetris):
         "d": TetrisActions.MOVE_R,
         "s": TetrisActions.MOVE_D,
         "x": TetrisActions.DROP,
+        "e": TetrisActions.ROTATE_CW,
+        "q": TetrisActions.ROTATE_CCW,
+        "w": TetrisActions.ROTATE_180
     }
 
     while not game.game_over:

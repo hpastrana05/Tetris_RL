@@ -17,16 +17,17 @@ class Tetris:
         self.reset()
 
     def _generate_next_pieces(self):
-      while len(self.next_pieces) <= GROUP_SIZE:
-          indexes = list(range(len(SHAPES)))
-          random.shuffle(indexes)
 
-          for index in indexes:
-              shape, color = SHAPES[index]
+        while len(self.next_pieces) <= GROUP_SIZE:
+            indexes = list(range(len(SHAPES)))
+            random.shuffle(indexes)
 
-              self.next_pieces.append(
-                  Piece([row[:] for row in shape], color)
-              )
+            for index in indexes:
+                kind, shape, color = SHAPES[index]
+
+                self.next_pieces.append(
+                    Piece(kind, [row[:] for row in shape], color)
+                )
 
     def _calculate_points(self, lines):
         points_by_lines = (0, 100, 300, 500, 800)
@@ -69,7 +70,7 @@ class Tetris:
         self.next_pieces = []
         self._generate_next_pieces()
         self._take_next_piece()
-        self.saved_piece = Piece([], (0, 0, 0))
+        self.saved_piece = None
 
         self.game_over = False
         self.points = 0
@@ -98,14 +99,13 @@ class Tetris:
             self._take_next_piece()
 
         elif action == TetrisActions.ROTATE_CW:
-
-            pass
+            self.actual_piece.rotate(1, self.board)
 
         elif action == TetrisActions.ROTATE_CCW:
-            pass
+            self.actual_piece.rotate(-1, self.board)
 
         elif action == TetrisActions.ROTATE_180:
-            pass
+            self.actual_piece.rotate(2, self.board)
 
         elif action == TetrisActions.SAVE_PIECE:
             pass
