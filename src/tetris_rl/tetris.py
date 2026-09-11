@@ -12,6 +12,7 @@ class Tetris:
         self.saved_piece = None
         self.can_save = True
 
+        self.level = 0
         self.lines_cleared = 0
         self.points = 0
         self.game_over = False
@@ -46,8 +47,12 @@ class Tetris:
             new_board.insert(0, [0 for _ in range(NUM_COLS)])
 
         self.lines_cleared += lines_cleared
+        self._calculate_level()
 
         self.board = new_board
+        
+    def _calculate_level(self):
+        self.level = self.lines_cleared // LINES_PER_LEVEL
 
     def _lock_piece(self):
         # Check every block before writing, so top-out cannot partially lock a piece.
@@ -81,6 +86,7 @@ class Tetris:
         self._take_next_piece()
         self.saved_piece = None
 
+        self.level = 0
         self.lines_cleared = 0
         self.game_over = False
         self.points = 0

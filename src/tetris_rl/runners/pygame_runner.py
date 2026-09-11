@@ -3,21 +3,7 @@ import pygame
 from tetris_rl.tetris_actions import TetrisActions
 from tetris_rl.tetris import Tetris
 from tetris_rl.piece import Piece
-from tetris_rl.config import (
-    WINDOW_HEIGHT, 
-    WINDOW_WIDTH,
-    BG_COLOR,
-    GRAY,
-    FPS,
-    GRID_COLOR,
-    BLOCK_SIZE,
-    NUM_COLS,
-    NUM_ROWS,
-    SIDE_BOARD_SIZE,
-    HEIGHT_SAVED,
-    HALF_SIDE_BOARD,
-    N_SHOWED_PIECES,
-)
+from tetris_rl.config import *
 
 def draw_grid(tetris: Tetris, screen):
     for y, row in enumerate(tetris.board):
@@ -89,8 +75,10 @@ def run(tetris: Tetris):
 
     clock = pygame.time.Clock()
     running = True
-    
 
+    fall_elapsed = 0
+    
+    
     while running:
         dt = clock.tick(FPS)
 
@@ -102,7 +90,13 @@ def run(tetris: Tetris):
                 tetris.step(actions[event.key])
 
         # Update game 
+        if running and not tetris.game_over:
+            fall_interval = max(MAX_VELOCITY, MIN_VELOCITY * 0.8 ** tetris.level)
+            fall_elapsed += dt
 
+            while fall_elapsed >= fall_interval and not tetris.game_over:
+                fall_elapsed -= fall_interval
+                tetris.step(TetrisActions.MOVE_D)
         # Draw game
         screen.fill(BG_COLOR)
 
