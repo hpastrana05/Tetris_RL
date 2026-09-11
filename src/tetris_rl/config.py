@@ -53,6 +53,7 @@ LINES_PER_LEVEL = 10
 # Fall intervals in milliseconds: shorter intervals mean faster falling.
 MAX_VELOCITY = 80
 MIN_VELOCITY = 500
+LOCK_DELAY = 500  # Time in milliseconds before a grounded piece locks.
 
 # ==================================================
 # INITIAL SHAPES: (KIND, MATRIX, COLOR)
