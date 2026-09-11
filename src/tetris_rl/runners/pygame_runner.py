@@ -13,15 +13,24 @@ def draw_grid(tetris: Tetris, screen):
 
             pygame.draw.rect(screen, GRID_COLOR, (x*BLOCK_SIZE, y*BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE), 1)
 
+def draw_ghost(piece, board, screen):
+    ghost = Piece(piece.kind, piece.shape, piece.color)
+    ghost.pos_x = piece.pos_x
+    ghost.pos_y = piece.pos_y
 
-def draw_piece(piece: Piece, screen):
+    while ghost.shift_down(board):
+        pass
+
+    draw_piece(ghost, screen, 1)
+
+def draw_piece(piece: Piece, screen, width = 0):
     for y, row in enumerate(piece.shape):
         for x, col in enumerate(row):
             if col:
                 dx = piece.pos_x + x
                 dy = piece.pos_y + y
 
-                pygame.draw.rect(screen, piece.color, (dx*BLOCK_SIZE, dy*BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE))
+                pygame.draw.rect(screen, piece.color, (dx*BLOCK_SIZE, dy*BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE), width)
 
 def draw_sideboard(tetris: Tetris, screen):
     pygame.draw.rect(screen, GRID_COLOR, (NUM_COLS*BLOCK_SIZE, 0, SIDE_BOARD_SIZE*BLOCK_SIZE, HEIGHT_SAVED*BLOCK_SIZE))
@@ -101,6 +110,7 @@ def run(tetris: Tetris):
         screen.fill(BG_COLOR)
 
         draw_grid(tetris, screen)
+        draw_ghost(tetris.actual_piece, tetris.board, screen)
         draw_piece(tetris.actual_piece, screen)
         draw_sideboard(tetris, screen)
 
