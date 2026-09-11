@@ -50,6 +50,11 @@ def draw_sideboard(tetris: Tetris, screen):
 
                         pygame.draw.rect(screen, saved.color, (dx, dy, BLOCK_SIZE, BLOCK_SIZE))
 
+    # Reserve the bottom two rows of the panel for score and level.
+    preview_size = 20
+    preview_top = HEIGHT_SAVED * BLOCK_SIZE
+    preview_height = (WINDOW_HEIGHT - preview_top - 2 * BLOCK_SIZE) / N_SHOWED_PIECES
+
     for i in range(N_SHOWED_PIECES):
         piece = tetris.next_pieces[i]
         x_size = len(piece.shape[0])
@@ -58,15 +63,24 @@ def draw_sideboard(tetris: Tetris, screen):
             for x, col in enumerate(row):
                 if col:
 
-                    dx = HALF_SIDE_BOARD - x_size * BLOCK_SIZE / 2 + x * BLOCK_SIZE
+                    dx = HALF_SIDE_BOARD - x_size * preview_size / 2 + x * preview_size
 
-                    dy = HEIGHT_SAVED*BLOCK_SIZE + i*BLOCK_SIZE*3 + y*BLOCK_SIZE
+                    dy = preview_top + i * preview_height + y * preview_size
 
-                    pygame.draw.rect(screen, piece.color, (dx, dy, BLOCK_SIZE, BLOCK_SIZE))
+                    pygame.draw.rect(screen, piece.color, (dx, dy, preview_size, preview_size))
+
+
+def draw_stats(tetris: Tetris, screen, font):
+    panel_x = NUM_COLS * BLOCK_SIZE + 10
+    top = WINDOW_HEIGHT - 2 * BLOCK_SIZE
+    for i, text in enumerate((f"Puntos: {tetris.points}", f"Nivel: {tetris.level}")):
+        label = font.render(text, True, (240, 240, 240))
+        screen.blit(label, (panel_x, top + i * BLOCK_SIZE))
 
 
 def run(tetris: Tetris):
     pygame.init()
+    font = pygame.font.Font(None, 24)
 
     actions = {
         pygame.K_LEFT : TetrisActions.MOVE_L,
@@ -113,6 +127,7 @@ def run(tetris: Tetris):
         draw_ghost(tetris.actual_piece, tetris.board, screen)
         draw_piece(tetris.actual_piece, screen)
         draw_sideboard(tetris, screen)
+        draw_stats(tetris, screen, font)
 
 
         
