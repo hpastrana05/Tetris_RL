@@ -49,6 +49,7 @@ class TetrisENV(gym.Env):
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed)
 
+        self.game.rng = self.np_random
         self.game.reset()
         self.steps = 0
 
@@ -56,46 +57,66 @@ class TetrisENV(gym.Env):
 
     def step(self, action):
         previous_lines = self.game.lines_cleared
-        previous_height = self._board_height()
-        previous_board = np.array(self.game.board, copy=True)
+        previous_metrics = self._board_metrics()
+        previous_pieces = self.game.pieces_locked
 
-        self.game.step(self.actions[action], dt_ms=50)
+        self.game.step(self.actions[int(action)], dt_ms=50)
         self.steps += 1
 
-        reward = self.reward()
+        reward = self.reward(previous_lines, previous_metrics, previous_pieces)
 
         terminated = self.game.game_over
         truncated = self.steps >=10_000
 
-        return self._get_obs(), reward, terminated, truncated, {}
+        info = {
+            "lines": self.game.lines_cleared,
+            "holes": self._board_metrics()[1],
+            "points": self.game.points,
+            "pieces_locked": self.game.pieces_locked,
+        }
 
-    def reward(self, prev_lines, prev_height, prev_board):
+        
+        return self._get_obs(), reward, terminated, truncated, info
+
+    def reward(self, prev_lines, prev_metrics, prev_pieces):
         lines = self.game.lines_cleared - prev_lines
-        height_increase = self._board_height() - prev_height
 
-        board_changed = not np.array_equal(prev_board, self.game.board)
+        height, holes, bumpiness = self._board_metrics()
+        prev_height, prev_holes, prev_bumpiness = prev_metrics
 
-        result = 0.0
-
-        if board_changed or lines > 0:
-            result += 10.0 * lines**2
-
-            if height_increase <= 0:
-                result += 1.0
-            else:
-                result -= float(height_increase**2)
+        result = (
+            10.0 * lines
+            + 1.0 * (self.game.pieces_locked - prev_pieces)
+            - 0.1 * (height - prev_height)
+            - 2.0 * (holes - prev_holes)
+            - 0.1 * (bumpiness - prev_bumpiness)
+        )
 
         if self.game.game_over:
-            result -= 20.0
+            result -= 20
 
         return result
         
 
-    def _board_height(self):
-        for y, row in enumerate(self.game.board):
-            if any(row):
-                return NUM_ROWS - y
-        return 0       
+    def _board_metrics(self):
+        board = np.asarray(self.game.board, dtype=bool)
+        occupied = board.any(axis=0)
+
+        heights = np.where(
+            occupied,
+            board.shape[0] - board.argmax(axis=0),
+            0,
+        )
+
+        holes = np.sum(
+            np.maximum.accumulate(board, axis=0) & ~board
+        )
+
+        aggregate_height = heights.sum()
+        bumpiness = np.abs(np.diff(heights)).sum()
+
+        return float(aggregate_height), float(holes), float(bumpiness)
+
 
     def _get_obs(self):
         game = self.game

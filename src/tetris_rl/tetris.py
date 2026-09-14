@@ -6,7 +6,8 @@ from tetris_rl.config import *
 from tetris_rl.piece import Piece
 
 class Tetris:
-    def __init__(self, fall_interval_ms=None):
+    def __init__(self, fall_interval_ms=None, rng=None):
+        self.rng = rng if rng is not None else random.Random()
         
         if fall_interval_ms is not None and (not math.isfinite(fall_interval_ms) or fall_interval_ms <= 0):
             raise ValueError("fall_interval_ms must be finite and positive")
@@ -29,7 +30,7 @@ class Tetris:
 
         while len(self.next_pieces) <= GROUP_SIZE:
             indexes = list(range(len(SHAPES)))
-            random.shuffle(indexes)
+            self.rng.shuffle(indexes)
 
             for index in indexes:
                 kind, shape, color = SHAPES[index]
@@ -75,6 +76,7 @@ class Tetris:
                     self.board[grid_y][grid_x] = 1
 
         self._check_line_clear()
+        self.pieces_locked += 1
     
     def _take_next_piece(self):
         self.can_save = True
@@ -97,6 +99,7 @@ class Tetris:
         self.lines_cleared = 0
         self.game_over = False
         self.points = 0
+        self.pieces_locked = 0
 
 
     def _reset_timers(self):
@@ -122,7 +125,7 @@ class Tetris:
         if self.game_over:
             return
 
-        # Count ground contact until the piece locks.
+        # Accumulate ground contact across moves and rotations until locking.
         if self.is_grounded():
             self.lock_elapsed += dt_ms
             if self.lock_elapsed >= LOCK_DELAY:
@@ -132,7 +135,6 @@ class Tetris:
             return
 
         # In the air, wait for the next one-row fall.
-        self.lock_elapsed = 0.0
         self.fall_elapsed += dt_ms
         if self.fall_elapsed >= self.fall_interval_ms:
             self.fall_elapsed = 0.0
@@ -142,10 +144,21 @@ class Tetris:
         """Apply an action, then advance time (e.g. dt_ms=50 for RL)."""
         if not math.isfinite(dt_ms) or dt_ms < 0:
             raise ValueError("dt_ms must be finite and non-negative")
-        self._apply_action(action)
-        if not self.game_over and not self.is_grounded():
-            self.lock_elapsed = 0.0
-        self.advance_time(dt_ms)
+
+        if self.game_over:
+            return
+
+        if self.is_grounded():
+            previous_piece =self.actual_piece
+            self.advance_time(dt_ms)
+
+            if self.game_over or self.actual_piece is not previous_piece:
+                return
+            self._apply_action(action)
+
+        else:        
+            self._apply_action(action)
+            self.advance_time(dt_ms)
 
     def _apply_action(self, action):
         if self.game_over:

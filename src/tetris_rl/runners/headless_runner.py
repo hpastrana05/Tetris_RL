@@ -13,7 +13,7 @@ def run(game):
     while True:
         
         action, _ = model.predict(obs, deterministic=True)
-        print(env.actions[int(action)].name)
+        # print(env.actions[int(action)].name)
 
         obs, reward, terminated, truncated, info = env.step(int(action))
 
@@ -23,6 +23,7 @@ def run(game):
         if terminated or truncated:
             break
 
+    print("Puntos:", env.game.points)
     print("Pasos:", env.steps)
     print("Líneas:", env.game.lines_cleared)
     print("Recompensa:", total_reward)

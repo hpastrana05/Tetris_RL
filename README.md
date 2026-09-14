@@ -22,10 +22,28 @@ In train.py, there is a file where the training of the model is done
 
 `uv run python -m tetris_rl.train`
 
+## Rewards
+
+`TetrisENV.reward()` combines lines cleared with changes (Δ) in the locked board:
+
+```text
+reward = 10 × lines + pieces_locked_this_step
+         - 0.1 × Δheight - 2 × Δholes - 0.1 × Δbumpiness
+```
+
+- **Height:** sum of column heights.
+- **Holes:** empty cells below blocks.
+- **Bumpiness:** sum of height differences between adjacent columns.
+
+Reducing these metrics adds reward. Game over costs an extra 20; steps with no
+board change receive 0 unless the game ends. Rewards are separate from game points.
+The placement bonus applies only when a piece locks, including gravity locks;
+moving, rotating, and holding earn no bonus. Weights are experimental: compare
+new training runs by lines cleared, not reward alone.
 
 ## Simulation time and RL
 
-The game owns gravity and the continuous ground-contact lock delay. Pygame
+The game owns gravity and the cumulative ground-contact lock delay. Pygame
 advances it using elapsed frame time. Headless training can advance simulated
 time without sleeping:
 
@@ -43,7 +61,9 @@ only applies input; `advance_time(dt_ms)` advances time separately. Use either
 `step(action, dt_ms=50)` or `step(action)` followed by `advance_time(50)`, avoiding
 double-counting time. Soft drop respects `LOCK_DELAY`; hard drop locks immediately.
 Each update performs at most one automatic fall and discards excess fall time.
-Lock time starts accumulating on the update after landing. New pieces start with
+Lock time starts accumulating on the update after landing, pauses in the air,
+and is preserved across moves and rotations. It resets only when the piece changes
+(including hold) or the game restarts. New pieces start with
 fresh timers; excess time after locking is discarded. Use small time steps such
 as 50 ms for training; long frames do not catch up on missed falls.
 The terminal runner advances 50 ms per recognized command (Enter waits).
