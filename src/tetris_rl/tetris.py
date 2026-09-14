@@ -1,3 +1,4 @@
+import math
 import random
 
 from tetris_rl.tetris_actions import TetrisActions
@@ -5,7 +6,12 @@ from tetris_rl.config import *
 from tetris_rl.piece import Piece
 
 class Tetris:
-    def __init__(self):
+    def __init__(self, fall_interval_ms=None):
+        
+        if fall_interval_ms is not None and (not math.isfinite(fall_interval_ms) or fall_interval_ms <= 0):
+            raise ValueError("fall_interval_ms must be finite and positive")
+        
+        self.fixed_fall_interval_ms = fall_interval_ms
         self.board = []
         self.actual_piece = None
         self.next_pieces = []
@@ -78,6 +84,7 @@ class Tetris:
         self.actual_piece.pos_x = (NUM_COLS - len(self.actual_piece.shape[0]))//2
 
         self._generate_next_pieces()
+        self._reset_timers()
 
     def reset(self):
         self.board = [[0 for _ in range(NUM_COLS)] for _ in range(NUM_ROWS)]
@@ -92,7 +99,55 @@ class Tetris:
         self.points = 0
 
 
-    def step(self, action):
+    def _reset_timers(self):
+        self.fall_elapsed = 0.0
+        self.lock_elapsed = 0.0
+
+    @property
+    def fall_interval_ms(self):
+        if self.fixed_fall_interval_ms is not None:
+            return self.fixed_fall_interval_ms
+        return max(MAX_VELOCITY, MIN_VELOCITY * 0.8 ** self.level)
+
+    def is_grounded(self):
+        probe = Piece(self.actual_piece.kind, self.actual_piece.shape, self.actual_piece.color)
+        probe.pos_x = self.actual_piece.pos_x
+        probe.pos_y = self.actual_piece.pos_y
+        return not probe.shift_down(self.board)
+
+    def advance_time(self, dt_ms):
+    
+        if not math.isfinite(dt_ms) or dt_ms < 0:
+            raise ValueError("dt_ms must be finite and non-negative")
+        if self.game_over:
+            return
+
+        # Count ground contact until the piece locks.
+        if self.is_grounded():
+            self.lock_elapsed += dt_ms
+            if self.lock_elapsed >= LOCK_DELAY:
+                self._lock_piece()
+                if not self.game_over:
+                    self._take_next_piece()
+            return
+
+        # In the air, wait for the next one-row fall.
+        self.lock_elapsed = 0.0
+        self.fall_elapsed += dt_ms
+        if self.fall_elapsed >= self.fall_interval_ms:
+            self.fall_elapsed = 0.0
+            self.actual_piece.shift_down(self.board)
+
+    def step(self, action, dt_ms=0):
+        """Apply an action, then advance time (e.g. dt_ms=50 for RL)."""
+        if not math.isfinite(dt_ms) or dt_ms < 0:
+            raise ValueError("dt_ms must be finite and non-negative")
+        self._apply_action(action)
+        if not self.game_over and not self.is_grounded():
+            self.lock_elapsed = 0.0
+        self.advance_time(dt_ms)
+
+    def _apply_action(self, action):
         if self.game_over:
             return
 
@@ -103,10 +158,7 @@ class Tetris:
             self.actual_piece.move_right(self.board)
 
         elif action == TetrisActions.MOVE_D:
-            if not self.actual_piece.shift_down(self.board):
-                self._lock_piece()
-                if not self.game_over:
-                    self._take_next_piece()
+            self.actual_piece.shift_down(self.board)
 
 
         elif action == TetrisActions.DROP:
@@ -151,3 +203,4 @@ class Tetris:
                 self._take_next_piece()
 
             self.can_save = False
+            self._reset_timers()

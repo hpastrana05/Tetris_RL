@@ -29,14 +29,15 @@ def run(game: Tetris):
         "x": TetrisActions.DROP,
         "e": TetrisActions.ROTATE_CW,
         "q": TetrisActions.ROTATE_CCW,
-        "w": TetrisActions.ROTATE_180
+        "w": TetrisActions.ROTATE_180,
+        "": TetrisActions.NO_OP
     }
 
     while not game.game_over:
         render(game)
         command = input(
             f"a: Left | d: Right | s: Move down | x: drop | \n" +
-             "e: rotate_r | q: rotate_l | w: rotate_180 | h: exit "
+             "e: rotate_r | q: rotate_l | w: rotate_180 | Enter: wait | h: exit "
         ).strip().lower()
 
         if command == "h":
@@ -44,7 +45,7 @@ def run(game: Tetris):
         
         action = actions.get(command)
         if action is not None:
-            game.step(action)
+            game.step(action, dt_ms=50)
     
     render(game)
     print("End game")

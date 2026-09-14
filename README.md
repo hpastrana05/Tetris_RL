@@ -15,3 +15,33 @@ The approach that I followed is to have a class Tetris which will control the lo
 After running the code, to select the way of running is to cahnge the `mode` variable in `main.py`
 
 `uv run tetris-rl `
+## Simulation time and RL
+
+The game owns gravity and the continuous ground-contact lock delay. Pygame
+advances it using elapsed frame time. Headless training can advance simulated
+time without sleeping:
+
+```python
+from tetris_rl.tetris import Tetris
+from tetris_rl.tetris_actions import TetrisActions
+
+game = Tetris(fall_interval_ms=500)  # Optional fixed speed for initial training.
+game.step(TetrisActions.MOVE_L, dt_ms=50)
+game.step(TetrisActions.NO_OP, dt_ms=50)  # Wait while simulation time advances.
+```
+
+Without `fall_interval_ms`, gravity accelerates with the level. `step(action)`
+only applies input; `advance_time(dt_ms)` advances time separately. Use either
+`step(action, dt_ms=50)` or `step(action)` followed by `advance_time(50)`, avoiding
+double-counting time. Soft drop respects `LOCK_DELAY`; hard drop locks immediately.
+Each update performs at most one automatic fall and discards excess fall time.
+Lock time starts accumulating on the update after landing. New pieces start with
+fresh timers; excess time after locking is discarded. Use small time steps such
+as 50 ms for training; long frames do not catch up on missed falls.
+The terminal runner advances 50 ms per recognized command (Enter waits).
+
+A future Gymnasium observation should include `fall_elapsed`, `lock_elapsed`,
+`fall_interval_ms`, and `level`, alongside the board and piece state, so the agent
+can distinguish states with different times until gravity or locking.
+
+Run timing checks with `uv run python -m unittest discover -s tests -v`.

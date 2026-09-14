@@ -9,4 +9,5 @@ class TetrisActions(Enum):
     ROTATE_CCW = auto()
     ROTATE_180 = auto()
     SAVE_PIECE = auto()
+    NO_OP = auto()
     

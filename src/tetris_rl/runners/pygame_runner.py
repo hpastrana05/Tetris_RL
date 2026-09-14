@@ -89,13 +89,6 @@ def draw_game_over(screen, font):
         screen.blit(label, position)
 
 
-def is_grounded(piece, board):
-    probe = Piece(piece.kind, piece.shape, piece.color)
-    probe.pos_x = piece.pos_x
-    probe.pos_y = piece.pos_y
-    return not probe.shift_down(board)
-
-
 def run(tetris: Tetris):
     pygame.init()
     font = pygame.font.Font(None, 24)
@@ -117,14 +110,12 @@ def run(tetris: Tetris):
     clock = pygame.time.Clock()
     running = True
 
-    fall_elapsed = 0
-    lock_elapsed = 0
-    grounded_piece = None
     
     
     while running:
         dt = clock.tick(FPS)
-        piece_changed = False
+        if not tetris.game_over:
+            tetris.advance_time(dt)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -134,51 +125,9 @@ def run(tetris: Tetris):
             elif event.type == pygame.KEYDOWN:
                 if tetris.game_over and event.key == pygame.K_r:
                     tetris.reset()
-                    piece_changed = True
                 elif event.key in actions:
-                    previous_piece = tetris.actual_piece
-                    action = actions[event.key]
-                    if action == TetrisActions.MOVE_D and not tetris.game_over:
-                        # Soft drop moves the piece; the lock timer fixes it later.
-                        tetris.actual_piece.shift_down(tetris.board)
-                    else:
-                        tetris.step(action)
-                    if tetris.actual_piece is not previous_piece:
-                        piece_changed = True
+                    tetris.step(actions[event.key])
 
-        # Update game 
-        if running and not tetris.game_over:
-            fall_interval = max(MAX_VELOCITY, MIN_VELOCITY * 0.8 ** tetris.level)
-            # A new piece gets a full interval before its first automatic fall.
-            if piece_changed:
-                fall_elapsed = 0
-                lock_elapsed = 0
-                grounded_piece = None
-            else:
-                fall_elapsed += dt
-
-            while fall_elapsed >= fall_interval and not tetris.game_over:
-                fall_elapsed -= fall_interval
-                if not tetris.actual_piece.shift_down(tetris.board):
-                    fall_elapsed = 0
-                    break
-
-            # Count continuous ground contact without extending it for every keypress.
-            if is_grounded(tetris.actual_piece, tetris.board):
-                if grounded_piece is tetris.actual_piece:
-                    lock_elapsed += dt
-                else:
-                    grounded_piece = tetris.actual_piece
-                    lock_elapsed = 0
-
-                if lock_elapsed >= LOCK_DELAY:
-                    tetris.step(TetrisActions.MOVE_D)
-                    fall_elapsed = 0
-                    lock_elapsed = 0
-                    grounded_piece = None
-            else:
-                lock_elapsed = 0
-                grounded_piece = None
         # Draw game
         screen.fill(BG_COLOR)
 
