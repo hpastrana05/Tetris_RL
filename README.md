@@ -15,6 +15,14 @@ The approach that I followed is to have a class Tetris which will control the lo
 After running the code, to select the way of running is to cahnge the `mode` variable in `main.py`
 
 `uv run tetris-rl `
+
+## Training
+
+In train.py, there is a file where the training of the model is done
+
+`uv run python -m tetris_rl.train`
+
+
 ## Simulation time and RL
 
 The game owns gravity and the continuous ground-contact lock delay. Pygame
