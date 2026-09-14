@@ -1,6 +1,7 @@
 import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
+from copy import deepcopy
 
 from tetris_rl.config import *
 from tetris_rl.tetris import Tetris
@@ -23,7 +24,7 @@ class TetrisENV(gym.Env):
             Actions.NO_OP,
         ]
 
-        self.action_space = spaces.Discrete(len(self.actions))
+        self.action_space = spaces.Discrete(40)
 
         self.observation_space = spaces.Dict({
             "board": spaces.MultiBinary((NUM_ROWS, NUM_COLS)),
@@ -60,10 +61,14 @@ class TetrisENV(gym.Env):
         previous_metrics = self._board_metrics()
         previous_pieces = self.game.pieces_locked
 
-        self.game.step(self.actions[int(action)], dt_ms=50)
+        
+        valid = self._decode_perform_action(action)
         self.steps += 1
 
         reward = self.reward(previous_lines, previous_metrics, previous_pieces)
+
+        if not valid:
+            reward -= 1.0
 
         terminated = self.game.game_over
         truncated = self.steps >=10_000
@@ -73,6 +78,7 @@ class TetrisENV(gym.Env):
             "holes": self._board_metrics()[1],
             "points": self.game.points,
             "pieces_locked": self.game.pieces_locked,
+            "invalid_action": not valid
         }
 
         
@@ -96,7 +102,59 @@ class TetrisENV(gym.Env):
             result -= 20
 
         return result
+    
+    def _decode_perform_action(self, action):
+        if not self.action_space.contains(action):
+            raise ValueError(f"Action not in defined space: {action}")
+
+        rotation = action // 10
+        position = action % 10
+
+        trial = deepcopy(self.game)
+        commands = []
+
+        if trial.actual_piece.kind != "O":
+            turns = (rotation - trial.actual_piece.rotation) % 4
+
+            rotation_action = {
+                1: Actions.ROTATE_CW,
+                2: Actions.ROTATE_180,
+                3: Actions.ROTATE_CCW
+            }.get(turns)
+
+            if rotation_action is not None:
+                trial.step(rotation_action)
+                commands.append(rotation_action)
+
+            if trial.actual_piece.rotation != rotation:
+                self.game.step(Actions.DROP)
+                return False
+
+        piece = trial.actual_piece
+        left_ofset = min(x for row in piece.shape for x, cell in enumerate(row) if cell)
+        current_column = piece.pos_x + left_ofset
+        displacement = position - current_column
+
+        move = Actions.MOVE_R if displacement > 0 else Actions.MOVE_L
+
+
+        for _ in range(abs(displacement)):
+            prev_x = trial.actual_piece.pos_x
+            trial.step(move)
+
+            if trial.actual_piece.pos_x == prev_x:
+                self.game.step(Actions.DROP)
+                return False
+
+            commands.append(move)
         
+
+        for command in commands:
+            self.game.step(command)
+        
+        self.game.step(Actions.DROP)
+        return True
+
 
     def _board_metrics(self):
         board = np.asarray(self.game.board, dtype=bool)
