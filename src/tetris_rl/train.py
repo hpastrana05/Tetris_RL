@@ -17,14 +17,14 @@ env = Monitor(env)
 model = DQN(
     "MultiInputPolicy",
     env,
-    buffer_size = 50_000,
-    learning_starts = 5_000,
-    exploration_fraction = 0.3,
+    buffer_size = 100_000,
+    learning_starts = 10_000,
+    exploration_fraction = 0.05,
     verbose = 1,
     device="cuda" # "cuda" for gpu
 )
 
-model.learn(total_timesteps=100_000)
+model.learn(total_timesteps=1_000_000)
 model.save("tetris_dqn")
 
 env.close()
