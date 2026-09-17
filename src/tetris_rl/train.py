@@ -24,7 +24,7 @@ model = DQN(
     device="cuda" # "cuda" for gpu
 )
 
-model.learn(total_timesteps=1_000_000)
+model.learn(total_timesteps=500_00)
 model.save("tetris_dqn")
 
 env.close()
