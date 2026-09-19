@@ -38,10 +38,10 @@ class Piece:
         return False
 
     def move_left(self, board):
-        self._try_move(-1, 0, board)
+        return self._try_move(-1, 0, board)
 
     def move_right(self, board):
-        self._try_move(1, 0, board)
+        return self._try_move(1, 0, board)
 
     def shift_down(self, board):
         return self._try_move(0, 1, board)

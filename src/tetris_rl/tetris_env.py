@@ -68,9 +68,9 @@ class TetrisENV(gym.Env):
         reward = self.reward(previous_lines, previous_metrics, previous_pieces)
 
         if not valid:
-            reward -= 1.0
+            reward -= 20.0
 
-        terminated = self.game.game_over
+        terminated = self.game.game_over or not valid
         truncated = self.steps >=10_000
 
         info = {
@@ -127,7 +127,7 @@ class TetrisENV(gym.Env):
                 commands.append(rotation_action)
 
             if trial.actual_piece.rotation != rotation:
-                self.game.step(Actions.DROP)
+                # self.game.step(Actions.DROP)
                 return False
 
         piece = trial.actual_piece
@@ -143,7 +143,7 @@ class TetrisENV(gym.Env):
             trial.step(move)
 
             if trial.actual_piece.pos_x == prev_x:
-                self.game.step(Actions.DROP)
+                # self.game.step(Actions.DROP)
                 return False
 
             commands.append(move)

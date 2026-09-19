@@ -4,7 +4,7 @@ from stable_baselines3 import DQN
 
 def run(game):
     env = TetrisENV()
-    model = DQN.load("tetris_dqn", device="cpu")
+    model = DQN.load("tetris_dqn_move", device="cpu")
 
     obs, info = env.reset()
 

@@ -5,8 +5,10 @@ from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.monitor import Monitor
 
 from tetris_rl.tetris_env import TetrisENV
+from tetris_rl.tetris_env_movement import TetrisENVMov
 
-env = TetrisENV()
+env = TetrisENVMov()
+
 
 # Checks compatibility with library 
 check_env(env)
@@ -24,7 +26,7 @@ model = DQN(
     device="cuda" # "cuda" for gpu
 )
 
-model.learn(total_timesteps=500_00)
-model.save("tetris_dqn")
+model.learn(total_timesteps=500_000)
+model.save("tetris_dqn_move")
 
 env.close()

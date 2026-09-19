@@ -153,25 +153,28 @@ class Tetris:
             self.advance_time(dt_ms)
 
             if self.game_over or self.actual_piece is not previous_piece:
-                return
-            self._apply_action(action)
+                return None
+            return self._apply_action(action)
 
         else:        
-            self._apply_action(action)
+            valid = self._apply_action(action)
             self.advance_time(dt_ms)
+            return valid
 
     def _apply_action(self, action):
         if self.game_over:
             return
-
-        if action == TetrisActions.MOVE_L:
-            self.actual_piece.move_left(self.board)
+        if action == TetrisActions.NO_OP:
+            return True
+        
+        elif action == TetrisActions.MOVE_L:
+            return self.actual_piece.move_left(self.board)
 
         elif action == TetrisActions.MOVE_R:
-            self.actual_piece.move_right(self.board)
+            return self.actual_piece.move_right(self.board)
 
         elif action == TetrisActions.MOVE_D:
-            self.actual_piece.shift_down(self.board)
+            return self.actual_piece.shift_down(self.board)
 
 
         elif action == TetrisActions.DROP:
@@ -180,19 +183,20 @@ class Tetris:
             self._lock_piece()
             if not self.game_over:
                 self._take_next_piece()
+            return True
 
         elif action == TetrisActions.ROTATE_CW:
-            self.actual_piece.rotate(1, self.board)
+            return self.actual_piece.rotate(1, self.board)
 
         elif action == TetrisActions.ROTATE_CCW:
-            self.actual_piece.rotate(-1, self.board)
+            return self.actual_piece.rotate(-1, self.board)
 
         elif action == TetrisActions.ROTATE_180:
-            self.actual_piece.rotate(2, self.board)
+            return self.actual_piece.rotate(2, self.board)
 
         elif action == TetrisActions.SAVE_PIECE:
             if not self.can_save:
-                return
+                return False
             
             if self.saved_piece:
                 self.actual_piece, self.saved_piece = self.saved_piece, self.actual_piece
@@ -217,3 +221,4 @@ class Tetris:
 
             self.can_save = False
             self._reset_timers()
+            return True
