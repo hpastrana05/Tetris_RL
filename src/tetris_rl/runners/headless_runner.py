@@ -1,10 +1,13 @@
 from tetris_rl.tetris_env import TetrisENV
+from tetris_rl.tetris_env_movement import TetrisENVMov
 from stable_baselines3 import DQN
 
+model_path = "models/tetris_dqn_piece_placement"
+ENV = TetrisENV()
 
 def run(game):
-    env = TetrisENV()
-    model = DQN.load("tetris_dqn_move", device="cpu")
+    env = ENV
+    model = DQN.load(model_path, device="cuda")
 
     obs, info = env.reset()
 

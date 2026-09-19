@@ -1,4 +1,4 @@
-
+from pathlib import Path
 
 from stable_baselines3 import DQN
 from stable_baselines3.common.env_checker import check_env
@@ -7,7 +7,9 @@ from stable_baselines3.common.monitor import Monitor
 from tetris_rl.tetris_env import TetrisENV
 from tetris_rl.tetris_env_movement import TetrisENVMov
 
-env = TetrisENVMov()
+model_path = "models/tetris_dqn_piece_placement"
+
+env = TetrisENV()
 
 
 # Checks compatibility with library 
@@ -23,10 +25,11 @@ model = DQN(
     learning_starts = 10_000,
     exploration_fraction = 0.05,
     verbose = 1,
-    device="cuda" # "cuda" for gpu
+    device="cuda" # "cuda" for gpu / "cpu" for cpu
 )
 
-model.learn(total_timesteps=500_000)
-model.save("tetris_dqn_move")
+model.learn(total_timesteps=1_000_000)
+Path(model_path).parent.mkdir(parents=True, exist_ok=True)
+model.save(model_path)
 
 env.close()
