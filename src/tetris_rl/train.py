@@ -1,35 +1,44 @@
+
 from pathlib import Path
 
-from stable_baselines3 import DQN
+from sb3_contrib import MaskablePPO
+from sb3_contrib.common.maskable.callbacks import MaskableEvalCallback
 from stable_baselines3.common.env_checker import check_env
 from stable_baselines3.common.monitor import Monitor
 
 from tetris_rl.tetris_env import TetrisENV
 from tetris_rl.tetris_env_movement import TetrisENVMov
 
-model_path = "models/tetris_dqn_piece_placement"
-
 env = TetrisENV()
 
-
-# Checks compatibility with library 
 check_env(env)
 
-# Monitors the duration and rewards of steps
-env = Monitor(env)
+train_env = Monitor(env)
+eval_env = Monitor(env)
 
-model = DQN(
-    "MultiInputPolicy",
-    env,
-    buffer_size = 100_000,
-    learning_starts = 10_000,
-    exploration_fraction = 0.05,
-    verbose = 1,
-    device="cuda" # "cuda" for gpu / "cpu" for cpu
+callback = MaskableEvalCallback(
+    eval_env,
+    best_model_save_path="models/best",
+    log_path="models/evaluations",
+    eval_freq=20_000,
+    n_eval_episodes=20,
+    deterministic=True,
 )
 
-model.learn(total_timesteps=1_000_000)
-Path(model_path).parent.mkdir(parents=True, exist_ok=True)
-model.save(model_path)
+model = MaskablePPO(
+    "MultiInputPolicy",
+    train_env,
+    learning_rate=3e-4,
+    gamma=0.99,
+    verbose=1,
+    device="auto",
+    seed=42,
+    tensorboard_log="logs",
+)
 
-env.close()
+model.learn(total_timesteps=1_000_000, callback=callback)
+
+Path("models").mkdir(exist_ok=True)
+model.save("models/tetris_maskable_ppo")
+train_env.close()
+eval_env.close()
