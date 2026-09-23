@@ -7,6 +7,13 @@ from tetris_rl.config import *
 from tetris_rl.tetris import Tetris
 from tetris_rl.tetris_actions import TetrisActions as Actions
 
+SCORE_SCALE = 100.0
+HOLE_WEIGHT = 0.2
+GAME_OVER_PENALTY = 10.0
+NOT_VALID_PENALTY = 0.05
+
+NUM_NEXT_OBS = 2
+
 class TetrisENV(gym.Env):
 
     def __init__(self):
@@ -28,23 +35,9 @@ class TetrisENV(gym.Env):
 
         self.observation_space = spaces.Dict({
             "board": spaces.MultiBinary((NUM_ROWS, NUM_COLS)),
-            "piece": spaces.MultiBinary((4,4)),
-            "position": spaces.Box(
-                low= np.array([-4, -4], dtype=np.int32),
-                high = np.array([NUM_COLS, NUM_ROWS], dtype=np.int32),
-                dtype= np.int32,
-            ),
-            "piece_type": spaces.Discrete(7),
-            "rotation": spaces.Discrete(4),
-            "next_pieces": spaces.MultiDiscrete([7] * PIECE_QUEUE_SIZE),
-            "saved_piece": spaces.Discrete(8),
-            "can_save": spaces.Discrete(2),
-            "timers": spaces.Box(
-                low= 0,
-                high=np.inf,
-                shape=(2,),
-                dtype=np.float32,
-            )
+            "piece": spaces.Discrete(7),
+            "next_pieces": spaces.MultiDiscrete([7] * NUM_NEXT_OBS), 
+            
         })
 
     def reset(self, *, seed=None, options=None):
@@ -57,20 +50,18 @@ class TetrisENV(gym.Env):
         return self._get_obs(), {}
 
     def step(self, action):
-        previous_lines = self.game.lines_cleared
-        previous_metrics = self._board_metrics()
-        previous_pieces = self.game.pieces_locked
-
+        prev_points = self.game.points
+        prev_holes = self._board_metrics()[1]
         
         valid = self._decode_perform_action(action)
         self.steps += 1
 
-        reward = self.reward(previous_lines, previous_metrics, previous_pieces)
+        reward = self.reward(prev_points, prev_holes)
 
         if not valid:
-            reward -= 20.0
+            reward -= NOT_VALID_PENALTY
 
-        terminated = self.game.game_over or not valid
+        terminated = self.game.game_over
         truncated = self.steps >=10_000
 
         info = {
@@ -84,75 +75,99 @@ class TetrisENV(gym.Env):
         
         return self._get_obs(), reward, terminated, truncated, info
 
-    def reward(self, prev_lines, prev_metrics, prev_pieces):
-        lines = self.game.lines_cleared - prev_lines
+    def reward(self, prev_points, prev_holes):
+        points_gained = self.game.points - prev_points
+        current_holes = self._board_metrics()[1]
 
-        height, holes, bumpiness = self._board_metrics()
-        prev_height, prev_holes, prev_bumpiness = prev_metrics
+        hole_change = current_holes - prev_holes
 
         result = (
-            10.0 * lines
-            + 1.0 * (self.game.pieces_locked - prev_pieces)
-            - 0.1 * (height - prev_height)
-            - 2.0 * (holes - prev_holes)
-            - 0.1 * (bumpiness - prev_bumpiness)
+            points_gained / SCORE_SCALE
+            - HOLE_WEIGHT * hole_change
         )
 
         if self.game.game_over:
-            result -= 20
-
+            result -= GAME_OVER_PENALTY
+    
         return result
     
-    def _decode_perform_action(self, action):
-        if not self.action_space.contains(action):
-            raise ValueError(f"Action not in defined space: {action}")
+    def action_masks(self):
+        mask = np.zeros(self.action_space.n)
 
+        for action in range(self.action_space.n):
+            trial = deepcopy(self.game)
+            mask[action] = self._perform_decoded_action(trial, action)
+        
+        return mask
+
+
+    def _perform_decoded_action(self, game, action):
         rotation = action // 10
         position = action % 10
 
-        trial = deepcopy(self.game)
-        commands = []
-
-        if trial.actual_piece.kind != "O":
-            turns = (rotation - trial.actual_piece.rotation) % 4
+        if game.actual_piece.kind !=  "O":
+            turns = (rotation - game.actual_piece.rotation) % 4
 
             rotation_action = {
                 1: Actions.ROTATE_CW,
                 2: Actions.ROTATE_180,
-                3: Actions.ROTATE_CCW
+                3: Actions.ROTATE_CCW,
             }.get(turns)
 
             if rotation_action is not None:
-                trial.step(rotation_action)
-                commands.append(rotation_action)
-
-            if trial.actual_piece.rotation != rotation:
-                # self.game.step(Actions.DROP)
+                if game.step(rotation_action) is False:
+                    return False
+            
+            if game.actual_piece.rotation != rotation:
                 return False
+            
+        piece = game.actual_piece
 
-        piece = trial.actual_piece
-        left_ofset = min(x for row in piece.shape for x, cell in enumerate(row) if cell)
-        current_column = piece.pos_x + left_ofset
+        left_offset = min(
+            x
+            for row in piece.shape
+            for x, cell in enumerate(row)
+            if cell
+        )
+
+        current_column = piece.pos_x + left_offset
         displacement = position - current_column
 
-        move = Actions.MOVE_R if displacement > 0 else Actions.MOVE_L
+        if displacement != 0:
+            move = Actions.MOVE_R if displacement > 0 else Actions.MOVE_L
 
+            for _ in range(abs(displacement)):
+                previous_x = game.actual_piece.pos_x
+                result = game.step(move)
 
-        for _ in range(abs(displacement)):
-            prev_x = trial.actual_piece.pos_x
-            trial.step(move)
-
-            if trial.actual_piece.pos_x == prev_x:
-                # self.game.step(Actions.DROP)
-                return False
-
-            commands.append(move)
+                if result is False or game.actual_piece.pos_x == previous_x:
+                    return False
+                
         
+        game.step(Actions.DROP)
 
-        for command in commands:
-            self.game.step(command)
+        return True
+
+
+    def _is_valid_action(self, action):
+        if not self.action_space.contains(action):
+            return False
         
-        self.game.step(Actions.DROP)
+        trial = deepcopy(self.game)
+        return self._perform_decoded_action(trial, action)
+
+        
+    def _decode_perform_action(self, action):
+        if not self.action_space.contains(action):
+            raise ValueError(f"Action not in defined space: {action}")
+
+        trial = deepcopy(self.game)
+        valid = self._perform_decoded_action(trial, action)
+
+        if not valid:
+            return False
+        
+        self._perform_decoded_action(self.game, action)
         return True
 
 
@@ -177,39 +192,13 @@ class TetrisENV(gym.Env):
 
 
     def _get_obs(self):
-        game = self.game
-        piece = game.actual_piece
-        position = np.array([piece.pos_x, piece.pos_y], dtype=np.int32,)
 
-        board = np.array(game.board, dtype=np.int8)
-
-        piece_array = np.zeros((4, 4), dtype=np.int8)
-
-        for y, row in enumerate(piece.shape):
-            for x, col in enumerate(row):
-                piece_array[y,x] = col
-
-        piece_ids = {
-            "I": 0, "O": 1, "T": 2, "S": 3,
-            "Z": 4, "J": 5, "L": 6
-        }
-
-        next_pieces = np.array(
-            [piece_ids[p.kind] for p in game.next_pieces[:PIECE_QUEUE_SIZE]]
-        )
-
-        saved_piece = 7
-        if game.saved_piece is not None:
-            saved_piece = piece_ids[game.saved_piece.kind]
+        next_pieces = []
+        for piece in self.game.next_pieces[:NUM_NEXT_OBS]:
+            next_pieces.append(PIECE_IDS[piece.kind])
 
         return {
-            "board": board,
-            "piece": piece_array,
-            "position": position,
-            "piece_type": piece_ids[piece.kind],
-            "rotation": piece.rotation,
-            "next_pieces": next_pieces,
-            "saved_piece": saved_piece,
-            "can_save": int(game.can_save),
-            "timers": np.array([game.fall_elapsed, game.lock_elapsed], dtype=np.float32)
+            "board": np.asarray(self.game.board, dtype=np.int8),
+            "piece": PIECE_IDS[self.game.actual_piece.kind],
+            "next_pieces": np.asarray(next_pieces)
         }

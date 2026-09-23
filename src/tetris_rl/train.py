@@ -9,12 +9,11 @@ from stable_baselines3.common.monitor import Monitor
 from tetris_rl.tetris_env import TetrisENV
 from tetris_rl.tetris_env_movement import TetrisENVMov
 
-env = TetrisENV()
 
-check_env(env)
+check_env(TetrisENV())
 
-train_env = Monitor(env)
-eval_env = Monitor(env)
+train_env = Monitor(TetrisENV(), info_keywords=("points", "lines", "pieces_locked"))
+eval_env = Monitor(TetrisENV(), info_keywords=("points", "lines", "pieces_locked"))
 
 callback = MaskableEvalCallback(
     eval_env,
@@ -36,7 +35,7 @@ model = MaskablePPO(
     tensorboard_log="logs",
 )
 
-model.learn(total_timesteps=1_000_000, callback=callback)
+model.learn(total_timesteps=10_000, callback=callback, device="cuda")
 
 Path("models").mkdir(exist_ok=True)
 model.save("models/tetris_maskable_ppo")

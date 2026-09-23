@@ -59,6 +59,16 @@ LOCK_DELAY = 500  # Time in milliseconds before a grounded piece locks.
 # INITIAL SHAPES: (KIND, MATRIX, COLOR)
 # Cells containing 1 form the piece; cells containing 0 are empty.
 # ==================================================
+PIECE_IDS = {
+    "I": 0,
+    "O": 1,
+    "T": 2,
+    "S": 3,
+    "Z": 4,
+    "J": 5,
+    "L": 6,
+}
+
 SHAPES = [
     ("I", [
         [0, 0, 0, 0],
