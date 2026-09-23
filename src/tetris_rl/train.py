@@ -30,12 +30,12 @@ model = MaskablePPO(
     learning_rate=3e-4,
     gamma=0.99,
     verbose=1,
-    device="auto",
+    device="cuda",
     seed=42,
     tensorboard_log="logs",
 )
 
-model.learn(total_timesteps=10_000, callback=callback, device="cuda")
+model.learn(total_timesteps=1_000_000, callback=callback)
 
 Path("models").mkdir(exist_ok=True)
 model.save("models/tetris_maskable_ppo")
